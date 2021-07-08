@@ -42,10 +42,10 @@ def select_random_images(data_directory, number):
 class ScanningCursor:
     x_location = 0
     y_location = 0
-    #Number of pixels to test to see if cursor has reached a side:
-    side_test_number = 20
-    #Threshold to reach to determine that a side has been reached (between 0 and 2):
-    side_threshold_number = 0.75
+    #Number of pixels in the "front-facing pole" to test to see if cursor is entering a side:
+    front_pole_size = 5
+    #Number of pixels in the "rear-facing pole" to test to see if cursor is leaving a side:
+    rear_pole_size = 1
 
     def get_border_bars(self, image_bitmap):
         #Start by finding any point on the top left bar
@@ -53,35 +53,38 @@ class ScanningCursor:
         #Next, find the borders of the top left bar
         top_left_top_edge, top_left_left_edge, top_left_bottom_edge, top_left_right_edge = \
             self.circumnavigate_top_left_bar(image_bitmap, starting_x, starting_y)
-        #print(f"Top/bottom edges: {top_left_top_edge}:{top_left_bottom_edge}")
-        #print(f"Left/right edges: {top_left_left_edge}:{top_left_right_edge}")
         #Next, find the best point that will allow you to scan for the other bars
         starting_x = int(top_left_left_edge * 0.9 + top_left_right_edge*0.1)
         starting_y = int(top_left_top_edge*0.5 + top_left_bottom_edge*0.5)
         #Scan for the x positions of the edges of the horizontal bars
         locations_of_side_bars = self.scan_horizontal_bars(image_bitmap, starting_x, starting_y)
         locations_of_top_bars = self.scan_vertical_bars(image_bitmap, starting_x, starting_y)
+        #We need to get the locations of the sides of the bottom left big bar:
+        starting_y = int( locations_of_side_bars[-1][0] * 0.5 + locations_of_side_bars[-1][1] * 0.5 )
+        bottom_left_top_edge, bottom_left_left_edge, bottom_left_bottom_edge, bottom_left_right_edge = \
+            self.circumnavigate_top_left_bar(image_bitmap, starting_x, starting_y)
         #Now we need to get the bottom-side grid bars
-        starting_y = locations_of_side_bars[-1][0] * 0.5 + locations_of_side_bars[-1][1] * 0.5
         locations_of_bottom_bars = self.scan_vertical_bars(image_bitmap, starting_x, starting_y)
-        #Now we need to locate the side columns of the ballot bar code
-        #It should be 1.5 bar widths on the left of the first bottom bar
-        bar_width = locations_of_bottom_bars[0][1] - locations_of_bottom_bars[0][0]
-        left_side_of_bar = locations_of_bottom_bars[0][0]
-        starting_x = int( left_side_of_bar - 1.5 * bar_width )
-        #If we go up by the length of the bottom left bar, that should place the cursor inside of the
-        #left-most bar code column
-        starting_y +=  locations_of_side_bars[-1][1] - locations_of_side_bars[-1][0]
+        #Now we need to locate the leftside column of the ballot bar code
+        starting_x = int( bottom_left_left_edge * 0.1 + bottom_left_right_edge * 0.9 )
+        #If we start in the middle of the bottom left bar, then go up by the length of the bottom left bar,
+        # that should place the cursor inside of the left-most bar code column
+        starting_y = (bottom_left_top_edge + bottom_left_bottom_edge)/2 \
+                      - (bottom_left_bottom_edge - bottom_left_top_edge)
+        starting_y = int(starting_y)
         #Now we need to scan the boundaries of the left-most bar
         left_bar_top_edge, left_bar_left_edge, left_bar_bottom_edge, left_bar_right_edge = \
             self.circumnavigate_top_left_bar(image_bitmap, starting_x, starting_y)
         #Now we need to find a point inside the right-most bar
-        starting_x = locations_of_bottom_bars[-1][0] * 0.5 + locations_of_bottom_bars[-1][1] * 0.5
+        starting_x = locations_of_bottom_bars[9][0] * 0.5 + locations_of_bottom_bars[9][1] * 0.5
+        starting_x = int(starting_x)
+        starting_y = (left_bar_top_edge + left_bar_bottom_edge)/2
+        starting_y = int(starting_y)
         right_bar_top_edge, right_bar_left_edge, right_bar_bottom_edge, right_bar_right_edge = \
             self.circumnavigate_top_left_bar(image_bitmap, starting_x, starting_y)
 
-        left_bar_data = [left_bar_top_edge, left_bar_left_edge, left_bar_bottom_edge, left_bar_right_edge]
-        right_bar_data = [right_bar_top_edge, right_bar_left_edge, right_bar_bottom_edge, right_bar_right_edge]
+        left_bar_data = [left_bar_left_edge, left_bar_top_edge, left_bar_right_edge, left_bar_bottom_edge]
+        right_bar_data = [right_bar_left_edge, right_bar_top_edge, right_bar_right_edge, right_bar_bottom_edge]
 
         return locations_of_top_bars, locations_of_side_bars, locations_of_bottom_bars, left_bar_data, right_bar_data
 
@@ -191,41 +194,53 @@ class ScanningCursor:
                 return list_of_horizontal_bars
 
     def top_edge_has_been_reached(self, image_bitmap, x_location, y_location):
-        sum_of_group_of_pixels = 0
-        current_pixel_is_black = image_bitmap[y_location][x_location] == 0
-        for x in range(x_location-self.side_test_number, x_location+self.side_test_number):
-            sum_of_group_of_pixels += image_bitmap[y_location-1][x]
-        if sum_of_group_of_pixels > self.side_threshold_number * self.side_test_number and current_pixel_is_black:
+        sum_of_white_pixels_in_front_pole = 0
+        sum_of_white_pixels_in_back_pole = 0
+        for y in range(y_location-1, y_location-self.front_pole_size-1, -1):
+            sum_of_white_pixels_in_front_pole += image_bitmap[y][x_location]
+        for y in range(y_location+1, y_location+self.rear_pole_size+1, 1):
+            sum_of_white_pixels_in_back_pole += image_bitmap[y][x_location]
+        if sum_of_white_pixels_in_front_pole == self.front_pole_size-1\
+                and sum_of_white_pixels_in_back_pole == 0:
             return True
         else:
             return False
 
     def right_edge_has_been_reached(self, image_bitmap, x_location, y_location):
-        sum_of_group_of_pixels = 0
-        current_pixel_is_black = image_bitmap[y_location][x_location] == 0
-        for y in range(y_location-self.side_test_number, y_location+self.side_test_number):
-            sum_of_group_of_pixels += image_bitmap[y][x_location+1]
-        if sum_of_group_of_pixels > self.side_threshold_number * self.side_test_number and current_pixel_is_black:
+        sum_of_white_pixels_in_front_pole = 0
+        sum_of_white_pixels_in_back_pole = 0
+        for x in range(x_location+1, x_location+self.front_pole_size+1, 1):
+            sum_of_white_pixels_in_front_pole += image_bitmap[y_location][x]
+        for x in range(x_location-1, x_location-self.rear_pole_size-1, -1):
+            sum_of_white_pixels_in_back_pole += image_bitmap[y_location][x]
+        if sum_of_white_pixels_in_front_pole == self.front_pole_size-1\
+                and sum_of_white_pixels_in_back_pole == 0:
             return True
         else:
             return False
 
     def bottom_edge_has_been_reached(self, image_bitmap, x_location, y_location):
-        sum_of_group_of_pixels = 0
-        current_pixel_is_black = image_bitmap[y_location][x_location] == 0
-        for x in range(x_location-self.side_test_number, x_location+self.side_test_number):
-            sum_of_group_of_pixels += image_bitmap[y_location+1][x]
-        if sum_of_group_of_pixels > self.side_threshold_number * self.side_test_number and current_pixel_is_black:
+        sum_of_white_pixels_in_front_pole = 0
+        sum_of_white_pixels_in_back_pole = 0
+        for y in range(y_location+1, y_location+self.front_pole_size+1, 1):
+            sum_of_white_pixels_in_front_pole += image_bitmap[y][x_location]
+        for y in range(y_location-1, y_location-self.rear_pole_size-1, -1):
+            sum_of_white_pixels_in_back_pole += image_bitmap[y][x_location]
+        if sum_of_white_pixels_in_front_pole == self.front_pole_size-1\
+                and sum_of_white_pixels_in_back_pole == 0:
             return True
         else:
             return False
 
     def left_edge_has_been_reached(self, image_bitmap, x_location, y_location):
-        sum_of_group_of_pixels = 0
-        current_pixel_is_black = image_bitmap[y_location][x_location] == 0
-        for y in range(y_location-self.side_test_number, y_location+self.side_test_number):
-            sum_of_group_of_pixels += image_bitmap[y][x_location-1]
-        if sum_of_group_of_pixels > self.side_threshold_number * self.side_test_number and current_pixel_is_black:
+        sum_of_white_pixels_in_front_pole = 0
+        sum_of_white_pixels_in_back_pole = 0
+        for x in range(x_location-1, x_location-self.front_pole_size-1, -1):
+            sum_of_white_pixels_in_front_pole += image_bitmap[y_location][x]
+        for x in range(x_location+1, x_location+self.rear_pole_size+1, 1):
+            sum_of_white_pixels_in_back_pole += image_bitmap[y_location][x]
+        if sum_of_white_pixels_in_front_pole == self.front_pole_size-1\
+                and sum_of_white_pixels_in_back_pole  == 0:
             return True
         else:
             return False
@@ -369,30 +384,98 @@ class ImageProcessingManager:
         return cropped_image_data
 
 
+def get_serial_number(image_bitmap):
+    cursor = ScanningCursor()
+    locations_of_top_bars, locations_of_side_bars, locations_of_bottom_bars, \
+    left_bar_data, right_bar_data = cursor.get_border_bars(image_bitmap)
+    #left_bar_data and locations_of_bottom_bars are the key to getting the locations of the bits in the bar code
+    location_of_barcode_bits = [0 for x in range(0, 18)] #(row, column)
+    for i in range(0, 18):
+        location_of_barcode_bits[i] = [0 for x in range(0, 2)]
+    location_of_barcode_bits[0][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[2][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[4][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[6][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[8][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[10][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[12][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[14][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+    location_of_barcode_bits[16][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])/4
+
+    location_of_barcode_bits[1][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[3][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[5][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[7][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[9][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[11][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[13][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[15][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+    location_of_barcode_bits[17][0] = left_bar_data[1] + (left_bar_data[3]-left_bar_data[1])*3/4
+
+    location_of_barcode_bits[0][1] = locations_of_bottom_bars[0][0] + \
+                                     (locations_of_bottom_bars[0][1] - locations_of_bottom_bars[0][0])/2
+    location_of_barcode_bits[1][1] = locations_of_bottom_bars[0][0] + \
+                                     (locations_of_bottom_bars[0][1] - locations_of_bottom_bars[0][0])/2
+    location_of_barcode_bits[2][1] = locations_of_bottom_bars[1][0] + \
+                                     (locations_of_bottom_bars[1][1] - locations_of_bottom_bars[1][0])/2
+    location_of_barcode_bits[3][1] = locations_of_bottom_bars[1][0] + \
+                                     (locations_of_bottom_bars[1][1] - locations_of_bottom_bars[1][0])/2
+    location_of_barcode_bits[4][1] = locations_of_bottom_bars[2][0] + \
+                                     (locations_of_bottom_bars[2][1] - locations_of_bottom_bars[2][0])/2
+    location_of_barcode_bits[5][1] = locations_of_bottom_bars[2][0] + \
+                                     (locations_of_bottom_bars[2][1] - locations_of_bottom_bars[2][0])/2
+    location_of_barcode_bits[6][1] = locations_of_bottom_bars[3][0] + \
+                                     (locations_of_bottom_bars[3][1] - locations_of_bottom_bars[3][0])/2
+    location_of_barcode_bits[7][1] = locations_of_bottom_bars[3][0] + \
+                                     (locations_of_bottom_bars[3][1] - locations_of_bottom_bars[3][0])/2
+    location_of_barcode_bits[8][1] = locations_of_bottom_bars[4][0] + \
+                                     (locations_of_bottom_bars[4][1] - locations_of_bottom_bars[4][0])/2
+    location_of_barcode_bits[9][1] = locations_of_bottom_bars[4][0] + \
+                                     (locations_of_bottom_bars[4][1] - locations_of_bottom_bars[4][0])/2
+    location_of_barcode_bits[10][1] = locations_of_bottom_bars[5][0] + \
+                                     (locations_of_bottom_bars[5][1] - locations_of_bottom_bars[5][0])/2
+    location_of_barcode_bits[11][1] = locations_of_bottom_bars[5][0] + \
+                                     (locations_of_bottom_bars[5][1] - locations_of_bottom_bars[5][0])/2
+    location_of_barcode_bits[12][1] = locations_of_bottom_bars[6][0] + \
+                                     (locations_of_bottom_bars[6][1] - locations_of_bottom_bars[6][0])/2
+    location_of_barcode_bits[13][1] = locations_of_bottom_bars[6][0] + \
+                                     (locations_of_bottom_bars[6][1] - locations_of_bottom_bars[6][0])/2
+    location_of_barcode_bits[14][1] = locations_of_bottom_bars[7][0] + \
+                                     (locations_of_bottom_bars[7][1] - locations_of_bottom_bars[7][0])/2
+    location_of_barcode_bits[15][1] = locations_of_bottom_bars[7][0] + \
+                                     (locations_of_bottom_bars[7][1] - locations_of_bottom_bars[7][0])/2
+    location_of_barcode_bits[16][1] = locations_of_bottom_bars[8][0] + \
+                                     (locations_of_bottom_bars[8][1] - locations_of_bottom_bars[8][0])/2
+    location_of_barcode_bits[17][1] = locations_of_bottom_bars[8][0] + \
+                                     (locations_of_bottom_bars[8][1] - locations_of_bottom_bars[8][0])/2
+
+    #Make everything into an integer:
+    for i in range(0,18):
+        for j in range(0,2):
+            location_of_barcode_bits[i][j] = int(location_of_barcode_bits[i][j])
+
+    barcode = 0
+    for bar in range(0, 18):
+        row = location_of_barcode_bits[bar][0]
+        col = location_of_barcode_bits[bar][1]
+        if image_bitmap[row:row+1, col:col+1][0][0] == 0:
+            #Then we're looking at a black dot. Time to add a "1"to the binary representation of the bar code
+            barcode += 2**bar
+    return barcode
+
+
 if __name__ == "__main__":
     data_directory, data_has_been_downloaded, browser_type, download_directory = load_configuration_information()
-    IM = ImageProcessingManager()
-    list_of_random_images = select_random_images(data_directory, 1)
-    random_image = list_of_random_images[0]
+    random_image = select_random_images(data_directory, 1)[0]
     override_image = 0
     if override_image:
         random_image = override_image
     ballot_image = Image.open(random_image)
     ballot_bitmap = np.asarray(ballot_image)
-    cursor = ScanningCursor()
     print("\n\neog " + random_image + "&")
     print(f"\"{random_image}\"")
-    locations_of_top_bars, locations_of_side_bars, locations_of_bottom_bars, \
-    left_bar_data, right_bar_data = cursor.get_border_bars(ballot_bitmap)
-
-    print(locations_of_top_bars[0][1] - locations_of_top_bars[0][0], locations_of_top_bars[0:2],
-          locations_of_top_bars[-1], locations_of_top_bars[-1][1] - locations_of_top_bars[-1][0])
-    print(locations_of_side_bars[0][1] - locations_of_side_bars[0][0], locations_of_side_bars[0:2],
-          locations_of_side_bars[-1], locations_of_side_bars[-1][1] - locations_of_side_bars[-1][0])
-    print(locations_of_bottom_bars[0][1] - locations_of_bottom_bars[0][0], locations_of_bottom_bars[0:2],
-          locations_of_bottom_bars[-1], locations_of_bottom_bars[-1][1] - locations_of_bottom_bars[-1][0])
-    print(f"Left bar data: {left_bar_data}")
-    print(f"Right bar data: {right_bar_data}")
-
-
-
+    try:
+        serial_number = get_serial_number(ballot_bitmap)
+        print(serial_number)
+    except:
+        print("Error")

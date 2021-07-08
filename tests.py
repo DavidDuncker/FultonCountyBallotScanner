@@ -77,3 +77,58 @@ def get_border_bars_better_test():
     #while(True):
     #    list_of_random_images = select_random_images(data_directory, 1)
     #    IM.compare_list_of_ballots(list_of_random_images)
+
+
+def circumnavigate_top_left_bar__debug_mode(image_bitmap, x_location, y_location):
+    print(f"starting x location: {x_location}")
+    print(f"starting y location: {y_location}")
+    scanner = ScanningCursor()
+    #Start by going up
+    while True:
+        if scanner.top_edge_has_been_reached(image_bitmap, x_location, y_location):
+            break
+        else:
+            y_location -= 1
+            print(f"x location: {x_location}")
+            print(f"y location: {y_location}")
+    #Start gathering data about the boundaries of the top left box
+    max_x_value = x_location
+    min_x_value = x_location
+    max_y_value = y_location
+    min_y_value = y_location
+    #Move back, create a buffer zone:
+    y_location += 10
+    #Go right
+    while True:
+        if scanner.right_edge_has_been_reached(image_bitmap, x_location, y_location):
+            break
+        else:
+            x_location += 1
+    #Record data:
+    if x_location > max_x_value:
+        max_x_value = x_location
+    #Move back, create a buffer zone:
+    x_location -= 10
+
+    #Go down:
+    while True:
+        if scanner.bottom_edge_has_been_reached(image_bitmap, x_location, y_location):
+            break
+        else:
+            y_location += 1
+    #Record data:
+    if y_location > max_y_value:
+        max_y_value = y_location
+    #Move back, create a buffer zone:
+    y_location -= 10
+    #Go left
+    while True:
+        if scanner.left_edge_has_been_reached(image_bitmap, x_location, y_location):
+            break
+        else:
+            x_location -= 1
+    #Record data:
+    if x_location < min_x_value:
+        min_x_value = x_location
+    return min_y_value, min_x_value, max_y_value, max_x_value
+
