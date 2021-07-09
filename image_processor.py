@@ -43,7 +43,7 @@ class ScanningCursor:
     x_location = 0
     y_location = 0
     #Number of pixels in the "front-facing pole" to test to see if cursor is entering a side:
-    front_pole_size = 5
+    front_pole_size = 2
     #Number of pixels in the "rear-facing pole" to test to see if cursor is leaving a side:
     rear_pole_size = 1
 
@@ -269,14 +269,14 @@ class ImageProcessingManager:
             image_object = Image.open(image_path)
             #Check which bubbles are filled in, and only allow cropping towards filled-in bubbles
             valid_crops = []
-            cropped_first_images = []
+            cropped_first_images = {}
             for cropping_scheme in list_of_available_crops:
                 cropped_image = image_object.crop(cropping_scheme)
                 image_data = np.asarray(cropped_image)
                 bubble_is_filled, cropped_first_image = self.bubble_is_filled_in(image_data)
                 if bubble_is_filled:
                     valid_crops.append(cropping_scheme)
-                    cropped_first_images.append(cropped_first_image)
+                    cropped_first_images[cropping_scheme] = cropped_first_image
 
             for second_image_index in range(first_image_index+1, len(list_of_image_paths)):
                 timer_start = time()
@@ -293,7 +293,7 @@ class ImageProcessingManager:
                 #Test each filled-in bubble
                 for cropping_scheme in range(0, len(valid_crops)):
                     #Crop to bubble, crop out the whitespace, then turn into numpy array
-                    cropped_first = cropped_first_images[cropping_scheme]
+                    cropped_first = cropped_first_images[ valid_crops[cropping_scheme] ]
 
                     cropped_second = second_image_object.crop(valid_crops[cropping_scheme])
                     cropped_second = np.asarray(cropped_second)
@@ -306,6 +306,7 @@ class ImageProcessingManager:
                     bubble_comparison_average = sum(bubble_comparison_results)/len(bubble_comparison_results)
                 except ZeroDivisionError:
                     bubble_comparison_average = 0
+                second_image_object.close()
                 if bubble_comparison_average > 0.99:
                     print(f"eog {image_path} &")
                     print(f"eog {second_image_path} &")
@@ -325,8 +326,7 @@ class ImageProcessingManager:
                     print(f"Average similarity between bubbles: {bubble_comparison_average}")
                     print("")
                     print("")
-
-
+            image_object.close()
 
     def compare_two_bubbles(self, image1_data, image2_data):
         number_of_rows = image1_data.shape[0]
@@ -466,16 +466,13 @@ def get_serial_number(image_bitmap):
 
 if __name__ == "__main__":
     data_directory, data_has_been_downloaded, browser_type, download_directory = load_configuration_information()
-    random_image = select_random_images(data_directory, 1)[0]
-    override_image = 0
-    if override_image:
-        random_image = override_image
-    ballot_image = Image.open(random_image)
-    ballot_bitmap = np.asarray(ballot_image)
-    print("\n\neog " + random_image + "&")
-    print(f"\"{random_image}\"")
-    try:
-        serial_number = get_serial_number(ballot_bitmap)
-        print(serial_number)
-    except:
-        print("Error")
+    number_of_comparisons_made = 0
+    while True:
+        list_of_random_images = select_random_images(data_directory, 100)
+        IM = ImageProcessingManager()
+        IM.compare_list_of_ballots(list_of_random_images)
+        number_of_comparisons_made += 4950
+        if number_of_comparisons_made % 4950 == 0:
+            print(f"Number of comparisons made: {number_of_comparisons_made}")
+
+

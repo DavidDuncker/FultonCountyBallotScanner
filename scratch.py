@@ -24,3 +24,25 @@ for random_image in list_of_random_images:
 
 
 
+    data_directory, data_has_been_downloaded, browser_type, download_directory = main.load_configuration_information()
+    barcodes = scan_all_barcodes(data_directory)
+    save_file = open("barcodes.json",'w')
+    save_file.write(json.dumps(barcodes))
+    save_file.close()
+    print(barcodes)
+
+    override_image = 0
+    if override_image:
+        random_image = override_image
+    ballot_image = Image.open(random_image)
+    ballot_bitmap = np.asarray(ballot_image)
+    ballot_image.close()
+    print("\n\neog " + random_image + "&")
+    print(f"\"{random_image}\"")
+    try:
+        serial_number = get_serial_number(ballot_bitmap)
+        print(serial_number)
+    except:
+        print("Error")
+
+
