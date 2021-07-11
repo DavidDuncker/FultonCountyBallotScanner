@@ -26,7 +26,7 @@ for random_image in list_of_random_images:
 
     data_directory, data_has_been_downloaded, browser_type, download_directory = main.load_configuration_information()
     barcodes = scan_all_barcodes(data_directory)
-    save_file = open("barcodes.json",'w')
+    save_file = open("data/barcodes.json", 'w')
     save_file.write(json.dumps(barcodes))
     save_file.close()
     print(barcodes)
@@ -44,5 +44,13 @@ for random_image in list_of_random_images:
         print(serial_number)
     except:
         print("Error")
+
+
+    barcode_file = open("data/barcodes.json", 'r')
+    barcode_dictionary = json.loads( barcode_file.read() )
+    consecutive_barcodes = catalogue_consecutive_barcodes(barcode_dictionary)
+    for number in range(2, len(consecutive_barcodes)):
+        print(f"{number}: \n {consecutive_barcodes[number]}")
+        print("")
 
 

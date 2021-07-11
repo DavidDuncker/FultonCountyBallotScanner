@@ -33,12 +33,49 @@ def select_random_images(data_directory, number):
     return selected_ballot_image_paths
 
 
+class BallotGrid:
+    top_grid_bars = []
+    left_grid_bars = []
+    bottom_grid_bars = []
+    left_bar_code_rectangle = []
+    right_bar_code_rectangle = []
+    image_data = np.array(0)
+
+    def __init__(self, path_to_ballot_image):
+        #Open Image
+        ballot_image = Image.open(path_to_ballot_image)
+        #Turn image into numpy array
+        self.image_data = np.asarray(ballot_image)
+        #Close Image
+        ballot_image.close()
+        #Get the locations of the grid bars
+        cursor = ScanningCursor()
+        self.top_grid_bars, self.left_grid_bars, self.bottom_grid_bars, \
+            self.left_bar_code_rectangle, self.right_bar_code_rectangle = cursor.get_border_bars(self.image_data)
+
+    def get_grid_image(self, top_grid_row, bottom_grid_row, left_grid_column, right_grid_column):
+        top = self.left_grid_bars[top_grid_row][0]
+        bottom = self.left_grid_bars[bottom_grid_row][1]
+        left = self.top_grid_bars[left_grid_column][0]
+        right = self.bottom_grid_bars[right_grid_column][1]
+        grid_based_cropped_image = self.image_data[top:bottom, left:right]
+        return grid_based_cropped_image
+
+    def get_grid_image_with_padding(self, top_grid_row, bottom_grid_row, left_grid_column, right_grid_column, top_padding, bottom_padding, left_padding, right_padding):
+        top = self.left_grid_bars[top_grid_row][0]
+        bottom = self.left_grid_bars[bottom_grid_row][1]
+        left = self.top_grid_bars[left_grid_column][0]
+        right = self.bottom_grid_bars[right_grid_column][1]
+        grid_based_cropped_image = self.image_data[top-top_padding:bottom+bottom_padding, left-left_padding:right+right_padding]
+        return grid_based_cropped_image
+
+
 #We can use the vertical and horizontal bars on the margins of the ballot to help us locate where ballot markers
     #and bubbles are expected to be on the ballot image. To this end, we can create a "Scanning Cursor" to
     #locate the x positions of the vertical edges of the top and bottom bars,
     #and the y positions of the horizontal edges of the left and right bars,
     #and use linear interpolations to focus on a specific area on the ballot where information might be.
-    #Essentially, this scanning cursor is an object that will help us establish a grid on the ballot.
+    #Essentially, this scanning cursor is an object that will help us establish a grid on the ballot.h
 class ScanningCursor:
     x_location = 0
     y_location = 0
@@ -307,12 +344,10 @@ class ImageProcessingManager:
                 except ZeroDivisionError:
                     bubble_comparison_average = 0
                 second_image_object.close()
-                if bubble_comparison_average > 0.99:
+                if bubble_comparison_average > 0.995:
+                    print(f"Average similarity between bubbles: {bubble_comparison_average}")
                     print(f"eog {image_path} &")
                     print(f"eog {second_image_path} &")
-                    print("")
-                    print(f"Average similarity between bubbles: {bubble_comparison_average}")
-                    print("")
                     print("")
 
                 #Print out results from timer... occasionally
@@ -472,7 +507,7 @@ if __name__ == "__main__":
         IM = ImageProcessingManager()
         IM.compare_list_of_ballots(list_of_random_images)
         number_of_comparisons_made += 4950
-        if number_of_comparisons_made % 4950 == 0:
+        if number_of_comparisons_made % (4950*30) == 0:
             print(f"Number of comparisons made: {number_of_comparisons_made}")
 
 

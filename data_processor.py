@@ -1,11 +1,108 @@
 import os
 import numpy as np
 from PIL import Image
+
 from image_processor import ScanningCursor
 from image_processor import get_serial_number
-import main
-import json
 from time import time
+from image_processor import BallotGrid
+
+
+class BubbleGridLocations:
+    trump_bubble = [18, 18, 0, 0]
+    biden_bubble = [21, 21, 0, 0]
+    jojo_bubble = [24, 24, 0, 0]
+    perdue_bubble = [32, 32, 0, 0]
+    ossoff_bubble = [32, 32, 0, 0]
+    hazel_bubble = [36, 36, 0, 0]
+    senate_special_election = [0 for x in range(0, 20)]
+    senate_special_election[0] = []
+    senate_special_election[0] = [20, 20, 11, 11]
+    senate_special_election[1] = []
+    senate_special_election[1] = [22, 22, 11, 11]
+    senate_special_election[2] = []
+    senate_special_election[2] = [24, 24, 11, 11]
+    senate_special_election[3] = []
+    senate_special_election[3] = [26, 26, 11, 11]
+    senate_special_election[4] = []
+    senate_special_election[4] = [28, 28, 11, 11]
+    senate_special_election[5] = []
+    senate_special_election[5] = [30, 30, 11, 11]
+    senate_special_election[6] = []
+    senate_special_election[6] = [32, 32, 11, 11]
+    senate_special_election[7] = []
+    senate_special_election[7] = [34, 34, 11, 11]
+    senate_special_election[8] = []
+    senate_special_election[8] = [36, 36, 11, 11]
+    senate_special_election[9] = []
+    senate_special_election[9] = [38, 38, 11, 11]
+    senate_special_election[10] = []
+    senate_special_election[10] = [40, 40, 11, 11]
+    senate_special_election[11] = []
+    senate_special_election[11] = [42, 42, 11, 11]
+    senate_special_election[12] = []
+    senate_special_election[12] = [44, 44, 11, 11]
+    senate_special_election[13] = []
+    senate_special_election[13] = [46, 46, 11, 11]
+    senate_special_election[14] = []
+    senate_special_election[14] = [48, 48, 11, 11]
+    senate_special_election[15] = []
+    senate_special_election[15] = [50, 50, 11, 11]
+    senate_special_election[16] = []
+    senate_special_election[16] = [52, 52, 11, 11]
+    senate_special_election[17] = []
+    senate_special_election[17] = [54, 54, 11, 11]
+    senate_special_election[18] = []
+    senate_special_election[18] = [56, 56, 11, 11]
+    senate_special_election[19] = []
+    senate_special_election[19] = [58, 58, 11, 11]
+
+    downballot_candidates = range(0, 21)
+    downballot_candidates[0] = []
+    downballot_candidates[0] = [18, 18, 22, 22]
+    downballot_candidates[1] = []
+    downballot_candidates[1] = []
+    downballot_candidates[2] = []
+    downballot_candidates[2] = []
+    downballot_candidates[3] = []
+    downballot_candidates[3] = []
+    downballot_candidates[4] = []
+    downballot_candidates[4] = []
+    downballot_candidates[5] = []
+    downballot_candidates[5] = []
+    downballot_candidates[6] = []
+    downballot_candidates[6] = []
+    downballot_candidates[7] = []
+    downballot_candidates[7] = []
+    downballot_candidates[8] = []
+    downballot_candidates[8] = []
+    downballot_candidates[9] = []
+    downballot_candidates[9] = []
+    downballot_candidates[10] = []
+    downballot_candidates[10] = []
+    downballot_candidates[11] = []
+    downballot_candidates[11] = []
+    downballot_candidates[12] = []
+    downballot_candidates[12] = []
+    downballot_candidates[13] = []
+    downballot_candidates[13] = []
+    downballot_candidates[14] = []
+    downballot_candidates[14] = []
+    downballot_candidates[15] = []
+    downballot_candidates[15] = []
+    downballot_candidates[16] = []
+    downballot_candidates[16] = []
+    downballot_candidates[17] = []
+    downballot_candidates[17] = []
+    downballot_candidates[18] = []
+    downballot_candidates[18] = []
+    downballot_candidates[19] = []
+    downballot_candidates[19] = []
+    downballot_candidates[20] = []
+    downballot_candidates[20] = []
+
+
+
 
 
 #Walk through all the files, scan their barcodes, and save the data into a python dictionary
@@ -111,18 +208,21 @@ def catalogue_consecutive_barcodes(barcode_dictionary):
     return catalogue_of_consecutive_groups_of_ballots
 
 
-
-
-
+#Get the grid data for each ballot and check each square on the grid for a mark
+def scan_ballot_grid(image_data):
+    #Load Scanning Cursor
+    cursor = ScanningCursor()
+    #Get the location of all the black rectangles on the border
+    locations_of_top_bars, locations_of_side_bars, locations_of_bottom_bars, \
+    left_bar_data, right_bar_data = cursor.get_border_bars(image_data)
+    #Create function that takes in 2 numbers and outputs the area of the ballot associated with those grid numbers:
 
 
 if __name__ == "__main__":
-    barcode_file = open("barcodes.json", 'r')
-    barcode_dictionary = json.loads( barcode_file.read() )
-    consecutive_barcodes = catalogue_consecutive_barcodes(barcode_dictionary)
-    for number in range(2, len(consecutive_barcodes)):
-        print(f"{number}: \n {consecutive_barcodes[number]}")
-        print("")
-
+    data_directory = "/home/dave/Documents/FultonCounty"
+    path = "/home/dave/Documents/FultonCounty/Tabulator05162/Batch063/Images/05162_00063_000057.tif"
+    ballot_grid = BallotGrid(path)
+    grid_area = ballot_grid.get_grid_image_with_padding(18, 18, 22, 22, 5, 5, 0, 15)
+    Image.fromarray(grid_area).resize( (1200, 400) ).show()
 
 
