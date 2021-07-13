@@ -53,4 +53,9 @@ for random_image in list_of_random_images:
         print(f"{number}: \n {consecutive_barcodes[number]}")
         print("")
 
+###
+    groups_of_identical_batches = group_together_duplicate_batches(tally_of_barcodes)
+    groups_of_similar_batches = group_together_similar_batches(tally_of_barcodes, 0, 0)
+    print(groups_of_identical_batches)
+    print(groups_of_similar_batches)
 

@@ -1,5 +1,8 @@
 import numpy as np
 from PIL import Image
+
+import main
+import select_images
 from helper_functions import load_configuration_information
 import os
 from random import randint
@@ -7,9 +10,24 @@ from time import sleep
 from time import time
 import image_processor
 from image_processor import ImageProcessingManager
-from image_processor import select_random_images
+from select_images import select_random_images
 from image_processor import ScanningCursor
 from helper_functions import load_configuration_information
+import OCR_capture
+import pytesseract
+from PIL import Image
+
+
+#Test OCR capture, make sure all the data is captured right
+def test_OCR_capture():
+    data_directory, data_has_been_downloaded, browser_type, download_directory = main.load_configuration_information()
+    list_of_ballot_paths = select_images.select_random_images(data_directory, 50)
+    for ballot_path in list_of_ballot_paths:
+        print(ballot_path)
+        data_page = OCR_capture.capture_third_page(ballot_path)
+        ballot_data = OCR_capture.read_text(data_page)
+        for key in ballot_data.keys():
+            print(f"{key}: {ballot_data[key]}")
 
 
 def test_get_border_bars():
@@ -18,7 +36,7 @@ def test_get_border_bars():
         #raise RuntimeError('Configuration File says that data has not been downloaded yet')
         pass
     IM = image_processor.ImageProcessingManager()
-    list_of_random_images = image_processor.select_random_images(data_directory, 20)
+    list_of_random_images = select_images.select_random_images(data_directory, 20)
     for random_image in list_of_random_images:
         override_image = "/home/dave/Documents/FultonCounty/Tabulator05150/Batch323/Images/05150_00323_000080.tif"
         ballot_image = Image.open(random_image)

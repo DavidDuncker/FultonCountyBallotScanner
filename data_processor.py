@@ -102,9 +102,6 @@ class BubbleGridLocations:
     downballot_candidates[20] = []
 
 
-
-
-
 #Walk through all the files, scan their barcodes, and save the data into a python dictionary
 #That python dictionary can be saved into a json file.
 def scan_all_barcodes(data_directory):

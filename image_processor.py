@@ -1,36 +1,18 @@
 import numpy as np
 from PIL import Image
+
+import select_images
 from helper_functions import load_configuration_information
-import os
 from random import randint
-from time import sleep
-from time import time
+from time import time, sleep
 
 #Black pixels are labeled as "0" or "False"
 #White pixels are labeled as "1" or "True"
 #Black pixels contain the information we want
+from select_images import select_random_images
+
 BLACK = 0
 WHITE = 1
-
-
-def select_random_images(data_directory, number):
-    all_ballot_image_paths = []
-    selected_ballot_image_paths = []
-    #Find all ballot images in data directory
-    for root, directories, files in os.walk(data_directory):
-        for file in files:
-            if ".tif" in file:
-                all_ballot_image_paths.append(os.path.join(root, file))
-    #Generate random ballots
-    for i in range(0, number):
-        #Generate random number out of all possible ballots (and subtract 1 from the total number of ballots after
-            #each iteration)
-        lottery = randint(0, len(all_ballot_image_paths)-i)
-        #Select random ballot
-        selected_ballot_image_paths.append(all_ballot_image_paths[lottery])
-        #Remove selected ballots from master list to prevent duplicates
-        all_ballot_image_paths.pop(lottery)
-    return selected_ballot_image_paths
 
 
 class BallotGrid:
@@ -332,19 +314,23 @@ class ImageProcessingManager:
                     #Crop to bubble, crop out the whitespace, then turn into numpy array
                     cropped_first = cropped_first_images[ valid_crops[cropping_scheme] ]
 
+
                     cropped_second = second_image_object.crop(valid_crops[cropping_scheme])
                     cropped_second = np.asarray(cropped_second)
                     cropped_second = self.crop_to_content(cropped_second)
 
                     #Now do the comparison
+                    print(f"Cropping Scheme: {cropping_scheme}")
+                    print(f"Crop: {valid_crops[cropping_scheme]}")
                     comparison_result = self.compare_two_bubbles(cropped_first, cropped_second)
+                    sleep(5)
                     bubble_comparison_results.append(comparison_result)
                 try:
                     bubble_comparison_average = sum(bubble_comparison_results)/len(bubble_comparison_results)
                 except ZeroDivisionError:
                     bubble_comparison_average = 0
                 second_image_object.close()
-                if bubble_comparison_average > 0.995:
+                if bubble_comparison_average > 0.8:
                     print(f"Average similarity between bubbles: {bubble_comparison_average}")
                     print(f"eog {image_path} &")
                     print(f"eog {second_image_path} &")
@@ -502,12 +488,9 @@ def get_serial_number(image_bitmap):
 if __name__ == "__main__":
     data_directory, data_has_been_downloaded, browser_type, download_directory = load_configuration_information()
     number_of_comparisons_made = 0
-    while True:
-        list_of_random_images = select_random_images(data_directory, 100)
-        IM = ImageProcessingManager()
-        IM.compare_list_of_ballots(list_of_random_images)
-        number_of_comparisons_made += 4950
-        if number_of_comparisons_made % (4950*30) == 0:
-            print(f"Number of comparisons made: {number_of_comparisons_made}")
+    images = ["/home/dave/Documents/FultonCounty/Tabulator05162/Batch139/Images/05162_00139_000045.tif",
+              "/home/dave/Documents/FultonCounty/Tabulator05162/Batch147/Images/05162_00147_000055.tif"]
+    IM = ImageProcessingManager()
+    IM.compare_list_of_ballots(images)
 
 
