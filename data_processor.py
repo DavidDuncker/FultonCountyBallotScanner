@@ -102,8 +102,8 @@ class BubbleGridLocations:
     downballot_candidates[20] = []
 
 
-#Walk through all the files, scan their barcodes, and save the data into a python dictionary
-#That python dictionary can be saved into a json file.
+#Input: the directory containing all the ballot images
+#Output: A dictionary. barcode_directory[<int tabulator>][<int batch>][<int ballot number>] = int barcode
 def scan_all_barcodes(data_directory):
     #Count the number of files, so we can keep track of progress
     total_number_of_files = 0
@@ -158,12 +158,9 @@ def scan_all_barcodes(data_directory):
     return barcode_directory
 
 
-#For each batch, we need to catalogue:
-    #1. The number of unique ballots in the batch
-    #2. The number of 2 consecutive bar codes, and the starting point
-    #3. The number of 3 consecutive bar codes, and the starting point
-    #4. The number of 4 or more consecutive bar codes, and the starting point.
-    #5. The highest number of consecutive barcodes, and the starting point
+#Input: A dictionary. barcode_directory[<int tabulator>][<int batch>][<int ballot number>] = int barcode
+#Output: A list. Catalogue[<int number>] =
+#                   [list of batches with a barcode that appears that many times consecutively]
 def catalogue_consecutive_barcodes(barcode_dictionary):
     catalogue_of_consecutive_groups_of_ballots = [0 for x in range(0, 150)]
     #Populate the dictionary with zeros
@@ -205,7 +202,7 @@ def catalogue_consecutive_barcodes(barcode_dictionary):
     return catalogue_of_consecutive_groups_of_ballots
 
 
-#Get the grid data for each ballot and check each square on the grid for a mark
+#I'm pretty sure this is scrap
 def scan_ballot_grid(image_data):
     #Load Scanning Cursor
     cursor = ScanningCursor()

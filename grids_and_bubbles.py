@@ -14,7 +14,9 @@ from select_images import select_random_images
 BLACK = 0
 WHITE = 1
 
-
+#Object that contains the locations of all the gridbars in the ballot
+#Automatically finds the gridbars upon initiation; requires a file path
+#Contains methods to crop the image given 4 numbers representing gridbars.
 class BallotGrid:
     top_grid_bars = []
     left_grid_bars = []
@@ -23,13 +25,8 @@ class BallotGrid:
     right_bar_code_rectangle = []
     image_data = np.array(0)
 
-    def __init__(self, path_to_ballot_image):
-        #Open Image
-        ballot_image = Image.open(path_to_ballot_image)
-        #Turn image into numpy array
-        self.image_data = np.asarray(ballot_image)
-        #Close Image
-        ballot_image.close()
+    def __init__(self, image_data):
+        self.image_data = image_data
         #Get the locations of the grid bars
         cursor = ScanningCursor()
         self.top_grid_bars, self.left_grid_bars, self.bottom_grid_bars, \
@@ -264,11 +261,19 @@ class ScanningCursor:
         else:
             return False
 
+
+#Input: an image bitmap
+#Output: a list of top gridbars and a list of side gridbars
+# The gridbars take the form of a list of two values; the X or Y location of the left or top edge,
+# and the X or Y location of the right or bottom edge
 def locate_grid_bars(image_bitmap):
     scanning_cursor = ScanningCursor()
     top_grid_bars, left_grid_bars = scanning_cursor.get_border_bars(image_bitmap)
 
-
+#ImageProcessingManager contains:
+#1) A list of x and y values that, when used for cropping ballot images,
+#   zooms in on a particular candidates bubble
+#2) A function that compares bubbles and determines how similar they are
 class ImageProcessingManager:
     leftside_bubble_crop = (180, 1120, 230, 2165)
     trump_bubble_crop = (175, 1105, 230, 1185)
@@ -277,6 +282,8 @@ class ImageProcessingManager:
     ossoff_bubble_crop = (175, 1905, 230, 1980)
 
 
+    #Input: a list of paths to ballot image files
+    #Output: a printed list of comparisons, with emphasis on highly similar bubbles
     def compare_list_of_ballots(self, list_of_image_paths):
         list_of_available_crops = [self.trump_bubble_crop, self.biden_bubble_crop,
                                    self.perdue_bubble_crop, self.ossoff_bubble_crop]
@@ -320,8 +327,8 @@ class ImageProcessingManager:
                     cropped_second = self.crop_to_content(cropped_second)
 
                     #Now do the comparison
-                    print(f"Cropping Scheme: {cropping_scheme}")
-                    print(f"Crop: {valid_crops[cropping_scheme]}")
+                    #print(f"Cropping Scheme: {cropping_scheme}")
+                    #print(f"Crop: {valid_crops[cropping_scheme]}")
                     comparison_result = self.compare_two_bubbles(cropped_first, cropped_second)
                     sleep(5)
                     bubble_comparison_results.append(comparison_result)
@@ -330,7 +337,7 @@ class ImageProcessingManager:
                 except ZeroDivisionError:
                     bubble_comparison_average = 0
                 second_image_object.close()
-                if bubble_comparison_average > 0.8:
+                if bubble_comparison_average > 0.9:
                     print(f"Average similarity between bubbles: {bubble_comparison_average}")
                     print(f"eog {image_path} &")
                     print(f"eog {second_image_path} &")
@@ -349,6 +356,9 @@ class ImageProcessingManager:
                     print("")
             image_object.close()
 
+
+    #Input: 2 Numpy arrays that represent images
+    #Output: A percentage (number between 0 and 1) representing how similar they are
     def compare_two_bubbles(self, image1_data, image2_data):
         number_of_rows = image1_data.shape[0]
         number_of_columns = image1_data.shape[1]
@@ -364,6 +374,11 @@ class ImageProcessingManager:
                     pass
         return number_of_similarities/number_of_comparisons
 
+
+    #For debugging purposes
+    #Takes a list of image paths
+    #Then crops them in a certain way
+    #Then opens them for human viewing
     def open_enlarge_compare(self, list_of_image_paths):
         for image_path in list_of_image_paths:
             #Open
@@ -377,6 +392,10 @@ class ImageProcessingManager:
             self.bubble_is_filled_in(image_data)
 
 
+    #Input: Numpy array representing an image of a ballot bubble
+    #Output: True or False (representing if the bubble is filled in), and also the cropped image
+    #It returns the cropped image for performance reasons; there's no need to re-crop an image
+    #multiple times
     def bubble_is_filled_in(self, image_data):
         #Count the zeros in array
         cropped_image_data = self.crop_to_content(image_data)
@@ -389,6 +408,9 @@ class ImageProcessingManager:
             return True, cropped_image_data
 
 
+    #Input: Numpy array representing image date
+    #Output: Numpy array representing that same image data, except with the all-white
+        #rows and all-white columns removed
     def crop_to_content(self, image_data):
         #Find non-empty rows and columns
         #"0" means black (i.e. content we want), and "1" means white (i.e. whitespace)
@@ -405,6 +427,9 @@ class ImageProcessingManager:
         return cropped_image_data
 
 
+
+#Input: Numpy array representing ballot image
+#Output: The barcode reading at the bottom left corner
 def get_serial_number(image_bitmap):
     cursor = ScanningCursor()
     locations_of_top_bars, locations_of_side_bars, locations_of_bottom_bars, \
