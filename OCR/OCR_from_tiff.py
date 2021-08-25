@@ -4,6 +4,10 @@ import pytesseract
 import os
 from time import time
 from datetime import datetime
+from pathlib import Path
+from numba import jit
+
+
 
 import helper_functions
 
@@ -158,8 +162,6 @@ def turn_ocr_text_into_data(ocr_text):
     sanitized_output = ''.join(filter(str.isalnum, sanitized_output))
     ballot_data["hash"] = hash(sanitized_output)
     return ballot_data
-
-
 
 
 def read_text(image_with_data):
@@ -440,9 +442,10 @@ def load_all_ocr_texts(directory, savefile):
     return [ballot_directory, errors]
 
 
-
 def create_ocr_textfiles(ballot_directory, ocr_directory):
     #Count the number of files, so we can keep track of progress
+    #Also, create new directories if needed
+    print("Getting number of files")
     total_number_of_files = 0
     for root, directories, files in os.walk(ballot_directory):
         for file in files:
@@ -458,12 +461,15 @@ def create_ocr_textfiles(ballot_directory, ocr_directory):
         for file in files:
             if ".tif" not in file:
                 continue
+
             ballot_filepath = os.path.join(root, file)
             img = capture_third_page(ballot_filepath)
-            ocr_string = pytesseract.image_to_string(img)
-
+            ocr_string = pytesseract.image_to_string(img, lang="eng", config="--psm 11")
+            new_path = root[len(ballot_directory) + 1:]
+            new_ocr_path = os.path.join(ocr_directory, new_path)
+            Path(new_ocr_path).mkdir(parents=True, exist_ok=True)
             ocr_filename = file[0:-4] + ".ocr"
-            ocr_filepath = os.path.join(ocr_directory, ocr_filename)
+            ocr_filepath = os.path.join(new_ocr_path, ocr_filename)
             ocr_file = open(ocr_filepath, 'w')
             ocr_file.write(ocr_string)
             ocr_file.close()
@@ -471,20 +477,16 @@ def create_ocr_textfiles(ballot_directory, ocr_directory):
             number_of_processed_files += 1
 
             # Display updates:
-            if number_of_processed_files == 10 or number_of_processed_files == 50 \
-                    or number_of_processed_files == 100 or number_of_processed_files % 500 == 0:
+            if number_of_processed_files == 1 or number_of_processed_files == 10 \
+                    or number_of_processed_files == 100 or \
+                    number_of_processed_files % 500 == 0:
                 print(f"Progress: {number_of_processed_files}/{total_number_of_files}")
                 timer = time()
                 print(f"Time elapsed (in seconds): {timer - timer_start}")
                 print(f"Milestone datetime: {datetime.now().strftime('%H:%M:%S %m/%d/%Y')}\n\n")
 
 
-
-
 if __name__ == "__main__":
-    path = "/home/dave/Documents/Election Fraud/FultonCountyElectionNight/OCR/05162_00147_000054.tif"
-    #data_directory, data_has_been_downloaded, browser_type, download_directory = helper_functions.load_configuration_information()
-    data_directory = "/home/dave/Documents/FultonCountyRecount"
-    #savefile = "data/ballot_directory_recount.json"
-    #ocr_all_ballots(data_directory, savefile)
-
+    bd = "/home/dave/Documents/Election Fraud/Fulton Recount Ballot Images"
+    od = "/home/dave/Documents/Election Fraud/Fulton_Recount_OCR2"
+    create_ocr_textfiles(bd, od)

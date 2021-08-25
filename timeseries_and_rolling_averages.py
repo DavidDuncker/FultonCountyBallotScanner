@@ -1,5 +1,7 @@
 import json
 from random import randint
+from datetime import datetime, timedelta
+
 
 #Input: A path to a file containing a JSON "ballot file".
     #ballot_file[1] includes all the errors
@@ -199,6 +201,53 @@ def determine_rolling_average(ordered_series, number_of_ballots_counted, savefil
         print(tabulator)
 
     return rolling_average
+
+
+#This function will compute Biden's total, or some other metric, before and after a certain point in time
+def before_and_after(window_of_time_in_hours, value_of_interest, tabulator, central_point_in_time, ordered_series_path):
+    list_of_ballots_before_central_point = []
+    list_of_ballots_after_central_point = []
+    central_point_in_time = datetime.strptime(central_point_in_time, "%m/%d/%y %H:%M:%S")
+    start_of_before_time = central_point_in_time - timedelta(hours=window_of_time_in_hours)
+    end_of_after_time = central_point_in_time + timedelta(hours=window_of_time_in_hours)
+
+    ordered_series_file = open(ordered_series_path, 'r')
+    ordered_series = json.loads(ordered_series_file.read())
+    ordered_series_file.close()
+
+    #Get lists of ballots before and after central point in time
+    for ballot_order in ordered_series[tabulator].keys():
+        date_time = f"{ordered_series[tabulator][ballot_order]['date']} {ordered_series[tabulator][ballot_order]['time']}"
+        date_time = datetime.strptime(date_time, "%m/%d/%y %H:%M:%S")
+        if date_time > start_of_before_time and date_time < central_point_in_time:
+            list_of_ballots_before_central_point.append(ordered_series[tabulator][ballot_order])
+        elif date_time > central_point_in_time and date_time < end_of_after_time:
+            list_of_ballots_after_central_point.append(ordered_series[tabulator][ballot_order])
+
+    #Get data from ballots in lists
+    before_data = {}
+    before_data["All"] = 0
+    after_data = {}
+    after_data["All"] = 0
+    for datapoint in list_of_ballots_before_central_point:
+        try:
+            before_data[ datapoint[value_of_interest] ] += 1
+            before_data["All"] += 1
+        except KeyError:
+            before_data[datapoint[value_of_interest]] = 1
+            before_data["All"] += 1
+
+    for datapoint in list_of_ballots_after_central_point:
+        try:
+            after_data[ datapoint[value_of_interest] ] += 1
+            after_data["All"] += 1
+        except KeyError:
+            after_data[datapoint[value_of_interest]] = 1
+            after_data["All"] += 1
+
+    return before_data, after_data
+
+
 
 if __name__ == "__main__":
     ballot_filepath = "data/ballot_directory_backup.json"

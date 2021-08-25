@@ -1,6 +1,43 @@
 import json
 import os
 import sys
+from datetime import datetime
+
+
+#This function will solve the problem of getting a Keyerror in the following line of code:
+#dict[tabulator][batch][ballot] = value
+#This function will add all the necessary parent branches to the dictionary
+#Abaondoned
+def update_nested_dict(dict_, tabulator, batch, ballot_number, value):
+    try:
+        dict_[tabulator][batch][ballot_number] = value
+    except KeyError:
+        try:
+            dict_[tabulator][batch] = {}
+            dict_[tabulator][batch][ballot_number] = value
+        except KeyError:
+            dict_[tabulator] = {}
+            dict_[tabulator][batch] = {}
+            dict_[tabulator][batch][ballot_number] = value
+
+    return dict_
+
+
+def post_updates(count, list_of_milestones, total_number = False, time = False):
+    if total_number:
+        update_string = f"{count}/{total_number}"
+    else:
+        update_string = f"{count}"
+    if time:
+        update_string += f"\n{datetime.now().strftime('%H:%M:%S %m/%d/%Y')}"
+    update_string += "\n"
+
+    for milestone in list_of_milestones[:-1]:
+        if count == milestone:
+            print(update_string)
+
+    if count % list_of_milestones[-1] == 0:
+        print(update_string)
 
 
 def find_matches_ballots_in_duplicate_batches():

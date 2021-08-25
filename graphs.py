@@ -10,7 +10,7 @@ if __name__ == "__main__":
     rolling_average = json.loads(file.read())
     file.close()
 
-    tabulator = "5150"
+    tabulator = "5164"
 
     for column in rolling_average[tabulator].keys():
         while(0 in rolling_average[tabulator][column]):
@@ -26,7 +26,9 @@ if __name__ == "__main__":
     plt.title(f"2000-ballot trailing average percentage of Biden votes\nTabulator {tabulator}")
     observer_incident = "11/03/20 22:40:00"
     observer_incident = datetime.strptime(observer_incident, "%m/%d/%y %H:%M:%S")
-    plt.vlines(observer_incident, 0, 100, linestyles="dashed", label="11/03/20 10:40:00; when observers were kicked out")
+    vlabel = "11/03/20 10:40:00; when observers were kicked out"
+    plt.vlines(observer_incident, 0, 100, linestyles="dashed", label=vlabel)
+    plt.legend()
     ax.tick_params(axis="x", which="both", rotation=70)
     ax.tick_params(axis="x", which="minor", labelsize=8)
     ax.tick_params(axis="x", which="major", labelsize=12)

@@ -1,15 +1,15 @@
-import tally_data_by_batch as t
+from tally_data import tally_data_by_batch as t
 import json
 
 
 if __name__ == "__main__":
-    tally = t.get_tally_of_ballot_info("../data/ballot_directory.json")
+    tally = t.get_tally_of_ballot_info("../data/FultonCounty/ballot_directory.json")
 
     for q in tally['total']['hash'].keys():
         if tally['total']['hash'][q] > 200:
             print(f"{q}:\t{tally['total']['hash'][q]}")
 
-    b = open("/home/dave/PycharmProjects/FultonCountyBallotScanner/data/ballot_directory.json", 'r')
+    b = open("/data/FultonCounty/ballot_directory.json", 'r')
     ballots = json.loads(b.read())
     b.close()
 

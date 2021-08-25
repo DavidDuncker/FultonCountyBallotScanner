@@ -133,7 +133,7 @@ def focus_on_two_particular_ballots(data_directory, ballot_json_filepath, tabula
 
 if __name__ == "__main__":
     data_directory = "/home/dave/Documents/FultonCounty"
-    ballot_json_filepath = "../data/ballot_directory.json"
+    ballot_json_filepath = "../data/FultonCounty/ballot_directory.json"
     list_of_ballots = select_images.select_random_ballots_with_data(data_directory, ballot_json_filepath, 147000)
     image_manager = IM()
 

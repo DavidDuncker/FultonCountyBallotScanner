@@ -327,7 +327,7 @@ if __name__ == "__main__":
     data_directory, data_has_been_downloaded, browser_type, download_directory = load_configuration_information()
     ballot_path = '/home/dave/Documents/FultonCounty/Tabulator05160/Batch181/Images/05160_00181_000029.tif'
     #ballot_path = select_images.select_random_images(data_directory, 1)[0]
-    ballot_json_path = "/home/dave/PycharmProjects/FultonCountyBallotScanner/data/ballot_directory.json"
+    ballot_json_path = "/data/FultonCounty/ballot_directory.json"
     grid_manager = BallotGridCrops(ballot_path)
     grid_manager.get_second_page()
     ballot_info = helper_functions.transform_ballot_path_into_ballot_info_object(ballot_path, ballot_json_path)

@@ -1,20 +1,13 @@
 import numpy as np
-from PIL import Image
 
 import main
 import select_images
-from helper_functions import load_configuration_information
-import os
-from random import randint
-from time import sleep
-from time import time
 import image_processor
 from image_processor import ImageProcessingManager
 from select_images import select_random_images
 from image_processor import ScanningCursor
 from helper_functions import load_configuration_information
-import OCR_capture
-import pytesseract
+from OCR import OCR_from_tiff
 from PIL import Image
 
 
@@ -24,8 +17,8 @@ def test_OCR_capture():
     list_of_ballot_paths = select_images.select_random_images(data_directory, 50)
     for ballot_path in list_of_ballot_paths:
         print(ballot_path)
-        data_page = OCR_capture.capture_third_page(ballot_path)
-        ballot_data = OCR_capture.read_text(data_page)
+        data_page = OCR_from_tiff.capture_third_page(ballot_path)
+        ballot_data = OCR_from_tiff.read_text(data_page)
         for key in ballot_data.keys():
             print(f"{key}: {ballot_data[key]}")
 

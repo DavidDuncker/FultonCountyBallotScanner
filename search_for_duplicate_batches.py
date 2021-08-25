@@ -1,7 +1,8 @@
-import OCR_capture
+import duplicates.dupe_batches_with_tally
+from OCR import OCR_from_tiff
 import os
 import json
-import tally_data_by_batch
+from tally_data import tally_data_by_batch
 
 
 def find_corresponding_ballots_in_duplicate_batches(similar_batches, ballot_data):
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     ballot_data = {}
     if not os.path.isfile(savefile):
         print("OCR-ing all ballots. This may take several days.")
-        ballot_data = OCR_capture.ocr_all_ballots(directory_of_ballot_images, savefile)
+        ballot_data = OCR_from_tiff.ocr_all_ballots(directory_of_ballot_images, savefile)
     elif os.path.isfile(savefile):
         ballot_database_file = open(savefile, 'r')
         ballot_data = json.loads(ballot_database_file.read())
@@ -61,9 +62,8 @@ if __name__ == "__main__":
     tally_of_ballot_info = tally_data_by_batch.get_tally_of_ballot_info(savefile)
     minimum_batch_difference = 0
     maximum_batch_difference = 90
-    list_of_similar_batches = tally_data_by_batch.\
-        group_together_similar_batches_with_ballot_info(tally_of_ballot_info,
-                                                        minimum_batch_difference, maximum_batch_difference)
+    list_of_similar_batches = duplicates.dupe_batches_with_tally.group_together_similar_batches_with_ballot_info(tally_of_ballot_info,
+                                                                                                                 minimum_batch_difference, maximum_batch_difference)
     print("Similar batches:")
     print(list_of_similar_batches)
     print("Saving info on similar batches and similar ballots...")
