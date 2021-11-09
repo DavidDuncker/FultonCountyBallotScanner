@@ -1,4 +1,5 @@
 import json
+import csv
 
 from duplicates.dupe_batches_with_tally import group_together_similar_batches_with_ballot_info
 
@@ -102,60 +103,176 @@ precincts = {'1': '01A', '2': '01B', '3': '01C', '4': '01E', '5': '01G', '6': '0
              '1116': 'SS11D', '1117': 'SS13A', '1118': 'SS13B', '1123': 'SS14', '1125': 'SS15A', '1126': 'SS15B',
              '1127': 'SS20', '1128': 'SS26', '1133': 'SS19A', '1134': 'SS22', '1137': 'SS29A', '1139': 'UC01A',
              '1140': 'UC02A', '1141': 'UC02C', '1145': 'UC01B', '1146': 'UC01B', '1149': 'UC01E', '1150': 'UC01E',
-             '1151': 'UC02B', '1152': 'UC02C', '1155': 'UC031', '1156': 'UC032'}
+             '1151': 'UC02B', '1152': 'UC02C', '1155': 'UC031', '1156': 'UC032', '180': 'CP04B', '179': 'CP04A',
+             '187': 'CP07F', '184': 'CP07C', '185': 'CP07D', '182': 'CP05B', '161': '12A1', '165': '12G',
+             '163': '12E1', '158': '11P', '1057': 'SC08G', '1046': 'SC17A', '882': 'CP08A', '816': 'UC01B',
+             '879': 'CP081', '870': 'CP07B', '622': 'RW11A', '654': 'SS18A', '769': 'EP04B', '1045': 'SC08C',
+             '379': '03P2', '1054': 'SC17B', '174': '12S', '246': '01I', '760': 'CH02', "":""}
 
 
-def add_precinct_keys(dict, attributes):
-    dict = {}
-    dict["all"] = {}
-    for precinct in precincts.values():
-        dict["all"][precinct] = {}
-        dict["all"][precinct]["total"] = 0
-        for attribute in attributes:
-            dict["all"][precinct][attribute] = {}
-
-    return dict
-
-
-def get_tally_of_ballot_races(ballots, attributes):
-    #Initialize dictionary containing final tally of all barcodes
-    tally_of_precinct_info_by_batch = {}
-    tally_of_precinct_info = {}
-
-    #Add dictionary keys
-    tally_of_precinct_info_by_batch = add_precinct_keys(tally_of_precinct_info_by_batch, attributes)
-
-    #Search through each tabulator
+def get_list_of_precincts(ballots):
+    list_of_precincts = []
     for tabulator in ballots.keys():
-        tally_of_precinct_info_by_batch[tabulator] =\
-            add_precinct_keys(tally_of_precinct_info_by_batch[tabulator], attributes)
-        #Search through each batch
         for batch in ballots[tabulator].keys():
-            tally_of_precinct_info_by_batch[tabulator][batch] = \
-                add_precinct_keys(tally_of_precinct_info_by_batch[tabulator][batch], attributes)
-            for ballot in ballots[tabulator][batch].keys():
-                for attribute in ballots[tabulator][batch][ballot]["races"].keys():
-                    if attribute not in attributes:
-                        continue
-                    #Get ballot data
-                    value = ballots[tabulator][batch][ballot]["races"][attribute]
-                    try:
-                        tally_of_precinct_info_by_batch[tabulator][batch][attribute][value] += 1
-                    except KeyError:
-                        tally_of_precinct_info_by_batch[tabulator][batch][attribute][value] = 1
-                    #Update barcode count on the tabulator level
-                    try:
-                        tally_of_precinct_info_by_batch[int(tabulator)]['total'][attribute][value] += 1
-                    except KeyError:
-                        tally_of_precinct_info_by_batch[int(tabulator)]['total'][attribute][value] = 1
-                    #Update barcode count on the county-wide level:
-                    try:
-                        tally_of_precinct_info_by_batch['total'][attribute][value] += 1
-                    except KeyError:
-                        tally_of_precinct_info_by_batch["total"][attribute][value] = 1
-                    pass
+            for ballot_number in ballots[tabulator][batch].keys():
+                precinct = ballots[tabulator][batch][ballot_number]["Precinct"]
+                if precinct not in list_of_precincts:
+                    list_of_precincts.append(precinct)
+
+    return list_of_precincts
+
+#Add a tree of information about precincts, races, and candidates
+#This data structure will be added on the county level,
+#the tabulator level, and the batch level
+def add_precinct_keys(_dict, races, list_of_precincts=[]):
+    if len(list_of_precincts)==0:
+        list_of_precincts = precincts.values()
+    _dict["precinct data"] = {}
+    _dict["precinct data"]["all precincts"] = {}
+    for race in races:
+        _dict["precinct data"]["all precincts"][race] = {}
+        _dict["precinct data"]["all precincts"][race]["all candidates"] = 0
+    for precinct in list_of_precincts:
+        _dict["precinct data"][precinct] = {}
+        for race in races:
+            _dict["precinct data"][precinct][race] = {}
+            _dict["precinct data"][precinct][race]["all candidates"] = 0
+
+    return _dict
+
+
+def update_precinct_tally(tally_of_precinct_info_by_batch, tabulator, batch, precinct, race, candidate):
+    # Several things to update:
+    # 1. The vote count for the given candidate in the given precinct for the batch tally
+    # 2. The vote count for all candidates in the given precinct for the batch tally
+    # 3. The vote count for the given candidate in all precincts for the batch tally
+    # 4. The vote count for all candidates in all precincts for the batch tally
+    # 5. - 12: The same as numbers 1-4, but for the tabulator tally and the county tally
+
+    #1 Update vote count for the given candidate in the given precinct for the batch tally:
+    try:
+        tally_of_precinct_info_by_batch[tabulator][batch]["precinct data"][precinct][race][candidate] += 1
+    except KeyError:
+        tally_of_precinct_info_by_batch[tabulator][batch]["precinct data"][precinct][race][candidate] = 1
+
+    #2 Update vote count for all candidates in the given precinct for the batch tally:
+    tally_of_precinct_info_by_batch[tabulator][batch]["precinct data"][precinct][race]["all candidates"] += 1
+
+    #3 Update vote count for the given candidate in all precincts for the batch tally:
+    try:
+        tally_of_precinct_info_by_batch[tabulator][batch]["precinct data"]["all precincts"][race][candidate] += 1
+    except KeyError:
+        tally_of_precinct_info_by_batch[tabulator][batch]["precinct data"]["all precincts"][race][candidate] = 1
+
+    #4 Update vote count for all candidates in all precincts for the batch tally
+    tally_of_precinct_info_by_batch[tabulator][batch]["precinct data"]["all precincts"][race]["all candidates"] += 1
+
+    #5 Update vote count for the given candidate in the given precinct for the tabulator tally:
+    try:
+        tally_of_precinct_info_by_batch[tabulator]["precinct data"][precinct][race][candidate] += 1
+    except KeyError:
+        tally_of_precinct_info_by_batch[tabulator]["precinct data"][precinct][race][candidate] = 1
+
+    #6 Update vote count for all candidates in the given precinct for the tabulator tally:
+    tally_of_precinct_info_by_batch[tabulator]["precinct data"][precinct][race]["all candidates"] += 1
+
+    #7 Update vote count for the given candidate in all precincts for the tabulator tally:
+    try:
+        tally_of_precinct_info_by_batch[tabulator]["precinct data"]["all precincts"][race][candidate] += 1
+    except KeyError:
+        tally_of_precinct_info_by_batch[tabulator]["precinct data"]["all precincts"][race][candidate] = 1
+
+    #8 Update vote count for all candidates in all precincts for the tabulator tally
+    tally_of_precinct_info_by_batch[tabulator]["precinct data"]["all precincts"][race]["all candidates"] += 1
+
+    #9 Update vote count for the given candidate in the given precinct for the county tally:
+    try:
+        tally_of_precinct_info_by_batch["precinct data"][precinct][race][candidate] += 1
+    except KeyError:
+        tally_of_precinct_info_by_batch["precinct data"][precinct][race][candidate] = 1
+
+    #10 Update vote count for the given candidate in the given precinct for the county tally:
+    tally_of_precinct_info_by_batch["precinct data"][precinct][race]["all candidates"] += 1
+
+    #11 Update vote count for the given candidate in all precincts for the county tally:
+    try:
+        tally_of_precinct_info_by_batch["precinct data"]["all precincts"][race][candidate] += 1
+    except KeyError:
+        tally_of_precinct_info_by_batch["precinct data"]["all precincts"][race][candidate] = 1
+
+    #8 Update vote count for all candidates in all precincts for the county tally
+    tally_of_precinct_info_by_batch["precinct data"]["all precincts"][race]["all candidates"] += 1
+
     return tally_of_precinct_info_by_batch
 
+
+def get_tally_of_ballot_races(ballots, races):
+    #Initialize dictionary containing final tally of all barcodes
+    tally_of_precinct_info_by_batch = {}
+
+    #Add dictionary keys
+    tally_of_precinct_info_by_batch = add_precinct_keys(tally_of_precinct_info_by_batch, races)
+
+    #Search through each tabulator, and initialize the precinct tally
+    for tabulator in ballots.keys():
+        tally_of_precinct_info_by_batch[tabulator] = {}
+        tally_of_precinct_info_by_batch[tabulator] = \
+            add_precinct_keys(tally_of_precinct_info_by_batch[tabulator], races)
+        #Search through each batch, and initialize the precinct tally
+        for batch in ballots[tabulator].keys():
+            tally_of_precinct_info_by_batch[tabulator][batch] = {}
+            tally_of_precinct_info_by_batch[tabulator][batch] = \
+                add_precinct_keys(tally_of_precinct_info_by_batch[tabulator][batch], races)
+            for ballot in ballots[tabulator][batch].keys():
+                #for race in ballots[tabulator][batch][ballot]["races"].keys():
+                for race in ballots[tabulator][batch][ballot].keys():
+                    if race not in races:
+                        continue
+                    #Get ballot data
+                    ballot_id = ballots[tabulator][batch][ballot]["Ballot ID"]
+                    precinct = precincts[ballot_id]
+                    #candidate = ballots[tabulator][batch][ballot]["races"][race]
+                    candidate = ballots[tabulator][batch][ballot][race]
+
+                    tally_of_precinct_info_by_batch = update_precinct_tally(tally_of_precinct_info_by_batch, tabulator,
+                                                                            batch, precinct, race, candidate)
+
+    return tally_of_precinct_info_by_batch
+
+
+def get_tally_of_ballot_races_from_csv(ballots, races=["President", "senate1", "senate2"]):
+    list_of_precincts = get_list_of_precincts(ballots)
+
+    #Initialize dictionary containing final tally of all barcodes
+    tally_of_precinct_info_by_batch = {}
+
+    #Add dictionary keys
+    tally_of_precinct_info_by_batch = add_precinct_keys(tally_of_precinct_info_by_batch, races,
+                                                        list_of_precincts=list_of_precincts)
+
+    #Search through each tabulator, and initialize the precinct tally
+    for tabulator in ballots.keys():
+        tally_of_precinct_info_by_batch[tabulator] = {}
+        tally_of_precinct_info_by_batch[tabulator] = \
+            add_precinct_keys(tally_of_precinct_info_by_batch[tabulator], races, list_of_precincts=list_of_precincts)
+        #Search through each batch, and initialize the precinct tally
+        for batch in ballots[tabulator].keys():
+            tally_of_precinct_info_by_batch[tabulator][batch] = {}
+            tally_of_precinct_info_by_batch[tabulator][batch] = \
+                add_precinct_keys(tally_of_precinct_info_by_batch[tabulator][batch], races,
+                                  list_of_precincts=list_of_precincts)
+            for ballot in ballots[tabulator][batch].keys():
+                for race in races:
+                    #Get ballot data
+                    #ballot_id = ballots[tabulator][batch][ballot]["Ballot ID"]
+                    #precinct = precincts[ballot_id]
+                    precinct = ballots[tabulator][batch][ballot]["Precinct"]
+                    candidate = ballots[tabulator][batch][ballot][race]
+
+                    tally_of_precinct_info_by_batch = update_precinct_tally(tally_of_precinct_info_by_batch, tabulator,
+                                                                            batch, precinct, race, candidate)
+
+    return tally_of_precinct_info_by_batch
 
 
 #This function groups batches together if they have a completely equal distribution of barcodes.

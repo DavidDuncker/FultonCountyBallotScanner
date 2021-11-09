@@ -1,3 +1,6 @@
+import re
+
+
 def strip_and_sanitize_whitespace(text):
     #Read text with image
     output_with_whitespace = text
@@ -71,7 +74,7 @@ def read_race_data(text, list_of_races):
     return race_data
 
 
-def read_adjudication_data(text, list_of_races):
+def read_adjudication_data(text, list_of_races, list_of_candidates):
     adjudication_data = {}
     #Filter for adjudication data
     text_lower = text.lower()
@@ -81,45 +84,62 @@ def read_adjudication_data(text, list_of_races):
     else:
         return adjudication_data, False
 
+    mark_percentages = re.findall(r"\(\d{1,3}%\)", text)
+    for mark_percentage in mark_percentages:
+        text = text.replace(mark_percentage, "")
+
     lines = text.split("\n")
-    adjudication_data['time'] = lines[0][15:22]
-    bookmark1 = lines[0].find("on")
-    bookmark2 = lines[0].find("by")
-    adjudication_data["date"] = lines[0][bookmark1 + 3:bookmark2 - 1]
-    adjudication_data["adjudicator"] = lines[0][bookmark2 + 3:]
-    list_of_lines_with_race_titles = {}
-    for line_index in range(0, len(lines)):
-        for race in list_of_races:
-            race_sanitized = race.replace("5", "S").replace("0", "O").replace("1", "l").replace("8", "B")
-            race_sanitized = ''.join(filter(str.isalnum, race_sanitized))
-            line_sanitized = lines[line_index].replace("5", "S").replace("0", "O").replace("1", "l").replace("8", "B")
-            line_sanitized = ''.join(filter(str.isalnum, line_sanitized))
-            if line_sanitized == race_sanitized:
-                list_of_lines_with_race_titles[line_index] = race
-            #Sometimes the lines are randomly and arbitrarily split
-            #I want to label the race as being on the last line that contains part of the name of the race
-            elif (line_sanitized in race_sanitized):
-                for successive_line_index in range(line_index, line_index + 4):
-                    s_line_sanitized = lines[line_index].replace("5", "S").replace("0", "O").replace("1", "l")\
-                        .replace("8", "B")
-                    s_line_sanitized = ''.join(filter(str.isalnum, s_line_sanitized))
-                    if s_line_sanitized in race_sanitized:
-                        list_of_lines_with_race_titles[line_index] = race
+    single_line_text = text.replace("\n", "")
+    single_line_text_sanitized = single_line_text.replace("5", "S").replace("0", "O").replace("1", "l").\
+        replace("8", "B").replace("{", "(").replace("}", ")")
+    bookmark1 = lines[0].find("at ")
+    bookmark2 = lines[0].find(" on ")
+    adjudication_data['time'] = lines[0][bookmark1+3 : bookmark2]
+    bookmark3 = lines[0].find(" by ")
+    adjudication_data["date"] = lines[0][bookmark2+4 : bookmark3]
+    adjudication_data["adjudicator"] = lines[0][bookmark3+4 : ]
+    locations_of_race_names = []
+    for race in list_of_races:
+        race_sanitized = race.replace("5", "S").replace("0", "O").replace("1", "l").\
+        replace("8", "B").replace("{", "(").replace("}", ")")
+        #race_sanitized = ''.join(filter(str.isalnum, race_sanitized))
+        #line_sanitized = ''.join(filter(str.isalnum, line_sanitized))
+        beginning_of_substring = single_line_text_sanitized.find(race_sanitized)
+        if beginning_of_substring == -1:
+            continue
+        end_of_substring = beginning_of_substring+len(race_sanitized)
+        locations_of_race_names.append([beginning_of_substring, end_of_substring])
+
+    locations_of_candidate_names = []
+    for candidate in list_of_candidates:
+        candidate_sanitized = candidate.replace("5", "S").replace("0", "O").replace("1", "l").\
+        replace("8", "B").replace("{", "(").replace("}", ")")
+        beginning_of_substring = single_line_text_sanitized.find(candidate_sanitized)
+        if beginning_of_substring == -1:
+            continue
+        end_of_substring = beginning_of_substring+len(candidate_sanitized)
+        locations_of_candidate_names.append([beginning_of_substring, end_of_substring])
 
 
-    for line_index in range(0, len(lines)):
-        line = lines[ line_index ]
-        current_line = line_index
 
+    print(single_line_text)
+    print(locations_of_race_names)
+
+    for race_index in range(0, len(locations_of_race_names)):
+        race_name_location = locations_of_race_names[race_index]
+        race_name = single_line_text[race_name_location[0] : race_name_location[1]]
+        next_race_location = locations_of_race_names[race_index + 1]
+        candidate_choices = single_line_text[race_name_location[1] : next_race_location[0]]
         def find_races(current_line):
             race = False
             while(race == False):
-                if current_line in list_of_lines_with_race_titles.keys():
-                    race = list_of_lines_with_race_titles[ current_line ]
-                else:
-                    current_line -= 1
-                    if current_line < 0:
-                        return False
+                break
+                #if current_line in list_of_lines_with_race_titles.keys():
+                #    race = list_of_lines_with_race_titles[ current_line ]
+                #else:
+                #    current_line -= 1
+                #    if current_line < 0:
+                #        return False
             return race
         race = find_races(current_line)
         if race == False:
@@ -161,8 +181,8 @@ def read_text(text, list_of_races):
     ballot_data = {}
     metadata = read_metadata(output)
     location_data = read_location_data(output)
-    race_data = read_race_data(output, list_of_races)
-    adjudication_data, ballot_data["adjudicated"] = read_adjudication_data(output, list_of_races)
+    race_data = read_race_data(text, list_of_races)
+    adjudication_data, ballot_data["adjudicated"] = read_adjudication_data(text, list_of_races)
     hash = get_hash(text)
     ballot_data.update(metadata)
     ballot_data.update(location_data)

@@ -1,14 +1,8 @@
-import time
-from random import randint
-
-from PIL import Image
-
-import get_ballot_bubble
+from image_analysis import get_ballot_bubble, select_images
 import helper_functions
-import select_images
 import json
 from datetime import datetime
-from grids_and_bubbles import ImageProcessingManager as IM
+from image_analysis.grids_and_bubbles import ImageProcessingManager as IM
 
 TOP = 0
 BOTTOM = 1

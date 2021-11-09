@@ -83,7 +83,7 @@ class ScanningCursor:
         locations_of_bottom_bars = self.scan_vertical_bars(image_bitmap, starting_x, starting_y)
         #Now we need to locate the leftside column of the ballot bar code
         starting_x = int( bottom_left_left_edge * 0.1 + bottom_left_right_edge * 0.9 )
-        #If we start in the middle of the bottom left bar, then go up by the length of the bottom left bar,
+        #If we initiate_browser in the middle of the bottom left bar, then go up by the length of the bottom left bar,
         # that should place the cursor inside of the left-most bar code column
         starting_y = (bottom_left_top_edge + bottom_left_bottom_edge)/2 \
                       - (bottom_left_bottom_edge - bottom_left_top_edge)

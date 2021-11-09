@@ -4,6 +4,17 @@ import sys
 from datetime import datetime
 
 
+def recursively_de_infinitize_dictionary(inf_dict):
+    if type(inf_dict).__name__ == "defaultdict":
+        de_infinitized_dict = dict(inf_dict)
+        for key in inf_dict.keys():
+            de_infinitized_dict[key] = recursively_de_infinitize_dictionary(inf_dict[key])
+    else:
+        de_infinitized_dict = inf_dict
+
+    return de_infinitized_dict
+
+
 #This function will solve the problem of getting a Keyerror in the following line of code:
 #dict[tabulator][batch][ballot] = value
 #This function will add all the necessary parent branches to the dictionary
@@ -30,7 +41,7 @@ def post_updates(count, list_of_milestones, total_number = False, time = False):
         update_string = f"{count}"
     if time:
         update_string += f"\n{datetime.now().strftime('%H:%M:%S %m/%d/%Y')}"
-    update_string += "\n"
+    #update_string += "\n"
 
     for milestone in list_of_milestones[:-1]:
         if count == milestone:

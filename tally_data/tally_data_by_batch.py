@@ -9,16 +9,15 @@ default_path = "data/barcodes.json"
     #barcodes["<tabulator>"]["<batch>"]["<ballot>"] = int barcode
 #Output: A dictionary associating a batch of ballots with a distribution of barcodes
     #tally_of_barcodes[int <tabulator][int <batch>][int <barcode>] = int <number of occurences of that barcode
-def get_tally_of_ballot_info(path):
+def get_tally_of_ballot_info(ballots, attributes):
     #Initialize dictionary containing final tally of all barcodes
     tally_of_ballot_info = {}
 
     #Open and load data
-    ballot_file = open(path, 'r')
-    ballots = json.loads(ballot_file.read())[0]
-    ballot_file.close()
+    #ballot_file = open(path, 'r')
+    #ballots = json.loads(ballot_file.read())[0]
+    #ballot_file.close()
 
-    attributes = ["hash", "President", "Senate", "Special Senate"]
     tally_of_ballot_info["total"] = {} #"Total" will contain ballot info as keys and amount as values
     for attribute in attributes:
         tally_of_ballot_info["total"][attribute] = {}
@@ -39,7 +38,7 @@ def get_tally_of_ballot_info(path):
                         ballots[tabulator][batch][ballot][attribute] = "software error"
                     continue
                 for attribute in ballots[tabulator][batch][ballot].keys():
-                    if attribute not in ["hash", "President", "Senate", "Special Senate"]:
+                    if attribute not in attributes:
                         continue
                     #Get ballot data
                     value = ballots[tabulator][batch][ballot][attribute]

@@ -119,12 +119,12 @@ def download_ballot_images(data_folder, default_download_folder, browser_type):
     #Edit configuration file to indicate the download is complete
 
     #Read
-    configuration_file = open(".config", "r")
+    configuration_file = open("../.config", "r")
     list_of_lines = configuration_file.readlines()
     #Edit
     list_of_lines[3] = "True" + os.linesep
     #Write
-    configuration_file = open(".config", "w")
+    configuration_file = open("../.config", "w")
     configuration_file.writelines(list_of_lines)
     #Close
     configuration_file.close()

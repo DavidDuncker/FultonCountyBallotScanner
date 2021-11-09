@@ -17,20 +17,22 @@ def read_metadata(text):
 
     lines = text.split("\n")
 
-    bookmark1 = lines[0].find("scannedat:")
-    bookmark2 = lines[0].find("on")
+    bookmark1 = text.find("scannedat:")
+    bookmark2 = text.find("on")
+    bookmark3 = text.find("\n", bookmark2)
     metadata["filename"] = text[0:bookmark1-3] + "." + text[bookmark1-3:bookmark1]
     # I have no idea why I need to do this, but I do:
     metadata["filename"] = metadata["filename"].replace("S", "")
-    metadata["time"] = lines[0][bookmark1+10:bookmark2]
-    metadata["date"] = lines[0][bookmark2+2:]
+    metadata["time"] = text[bookmark1+10:bookmark2]
+    metadata["date"] = text[bookmark2+2:bookmark3]
 
-    bookmark1 = lines[1].find("Scannedon:")
-    bookmark2 = lines[1].find("Tabulator:")
-    bookmark3 = lines[1].find("Batch:")
-    metadata["scanned_on"] = lines[1][bookmark1+10:bookmark2]
-    metadata["Tabulator"] = lines[1][bookmark2+10:bookmark3]
-    metadata["Batch"] = lines[1][bookmark3+6:]
+    bookmark1 = text.find("Scannedon")
+    bookmark2 = text.find("Tabulator")
+    bookmark3 = text.find("Batch")
+    bookmark4 = text.find("\n", bookmark3)
+    metadata["scanned_on"] = text[bookmark1+10:bookmark2]
+    metadata["Tabulator"] = text[bookmark2+10:bookmark3]
+    metadata["Batch"] = text[bookmark3+6:bookmark4]
     metadata["Ballot"] = str(int(metadata["filename"][-8:-4]))
 
     return metadata
@@ -40,11 +42,15 @@ def read_location_data(text):
     location_data = {}
 
     lines = text.split("\n")
-    lines[3] = ''.join(lines[3].split())
+    text = ''.join(text.split(" "))
 
-    bookmark1 = lines[3].find("BallotID:")
-    location_data["Poll ID"] = lines[3][:bookmark1]
-    location_data["Ballot ID"] = lines[3][bookmark1+9:]
+    bookmark1 = text.find("PollID")
+    bookmark2 = text.find("BallotID")
+    bookmark3 = text.find("\n", bookmark2)
+    location_data["Poll ID"] = text[bookmark1+7:bookmark2]
+    location_data["Poll ID"] = location_data["Poll ID"].replace("\n", "").replace(" ", "")
+    location_data["Ballot ID"] = text[bookmark2+9:bookmark3]
+    location_data["Ballot ID"] = location_data["Ballot ID"].replace("\n", "").replace(" ", "")
 
     return location_data
 

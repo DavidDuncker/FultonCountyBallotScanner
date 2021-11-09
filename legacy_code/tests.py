@@ -1,10 +1,10 @@
 import numpy as np
 
 import main
-import select_images
+from image_analysis import select_images
 import image_processor
 from image_processor import ImageProcessingManager
-from select_images import select_random_images
+from image_analysis.select_images import select_random_images
 from image_processor import ScanningCursor
 from helper_functions import load_configuration_information
 from OCR import OCR_from_tiff

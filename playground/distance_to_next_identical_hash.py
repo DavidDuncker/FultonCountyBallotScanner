@@ -1,4 +1,4 @@
-from timeseries_and_rolling_averages import create_ordered_timeseries_of_ballots
+from analyze_ballot_directory.timeseries_and_rolling_averages import create_ordered_timeseries_of_ballots
 from collections import Counter
 #I'm having trouble finding some way to figure out how to detect multiple passes of the same ballot.
 #I decided that if poll workers were scanning and re-scanning ballots over and over again, then the

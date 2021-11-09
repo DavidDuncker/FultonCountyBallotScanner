@@ -89,7 +89,7 @@ def determine_rolling_average(ordered_series, number_of_ballots_counted, savefil
             percentage_of_unique_ballots_rolling_average.append(0)
             list_of_timestamps.append(0)
 
-        #If we're doing a rolling average of the previous 30 ballots, then we'll start on
+        #If we're doing a rolling average of the previous 30 ballots, then we'll initiate_browser on
             #the 29th ballot, calculate the average of ballots 0-29, and make that average
             #be the first average in the list of ballots
             #Same logic applies to a rolling average of N ballots
